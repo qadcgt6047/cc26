@@ -1,0 +1,51 @@
+name: Build LiquidGlassCC18 roothide deb
+
+# 编译跑在 GitHub 提供的 macOS 云主机上（自带 Xcode），
+# 你的电脑只需要一个浏览器：上传源码 -> 等构建 -> 下载 .deb。
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  # 用于自动创建 Release，让你能直接下载 .deb
+  contents: write
+
+jobs:
+  build:
+    # 使用当前受支持的 arm64 macOS runner 标签
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build .deb
+        env:
+          # install-sdk 走 api.github.com；带上 token 可避免匿名限流导致 SDK 下载失败
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ./build.sh
+          export THEOS="$HOME/theos"
+          ./build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidGlassCC18-roothide
+          path: packages/*.deb
+          if-no-files-found: error
+
+      # 构建成功后直接发布成 Release，网页上点一下就能下 .deb
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: LiquidGlassCC18 build ${{ github.run_number }}
+          files: packages/*.deb
+          body: |
+            iOS 16 / roothide (arm64e) 自动构建。
+            需要已安装 ControlCenter18。
+            安装：dpkg -i <文件>.deb && killall -9 SpringBoard
