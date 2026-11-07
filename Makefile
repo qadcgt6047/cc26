@@ -12,6 +12,11 @@
 TARGET := iphone:clang:latest:16.0
 THEOS_PACKAGE_SCHEME := roothide
 
+# Theos 默认会给 FINALPACKAGE 加 -Werror（common.mk 里的 GO_EASY_ON_ME 判断），
+# 同时让 Logos 把警告当错误。CI 用的是 Xcode 的 iOS 18.5 SDK，
+# 一些 iOS 15 起废弃的 API 会直接把构建打断，这里统一降级为普通警告。
+GO_EASY_ON_ME = 1
+
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = LiquidGlassCC LiquidGlassPrefs
@@ -21,7 +26,9 @@ LiquidGlassPrefs_FILES = LiquidGlassEntry.x LiquidGlassPrefs.m
 
 FRAMEWORKS = UIKit Foundation CoreGraphics QuartzCore
 
-ADDITIONAL_CFLAGS = -fobjc-arc -Wno-unused-variable -Wno-unused-function
+# 双保险：ADDITIONAL_CFLAGS 位于 Theos 内部 CFLAGS 之后，
+# 即使上游 Theos 再追加 -Werror，-Wno-error 也能把警告降级。
+ADDITIONAL_CFLAGS = -fobjc-arc -Wno-error -Wno-unused-variable -Wno-unused-function
 
 # Preferences.framework 只存在于 Settings 进程，且 roothide 的 SDK
 # 通常不带私有框架 stub，运行期动态解析即可。

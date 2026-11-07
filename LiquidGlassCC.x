@@ -181,7 +181,26 @@ static void LGScanView(UIView *root, NSInteger depth) {
 static void LGRescanWindows(void) {
     UIApplication *app = [UIApplication sharedApplication];
     if (!app) return;
-    for (UIWindow *window in app.windows) LGScanView(window, 0);
+
+    // UIApplication.windows 自 iOS 15 起被标记废弃，而 Theos 在 FINALPACKAGE
+    // 下会给编译加 -Werror，直接取用会直接编译失败。iOS 16 走 UIWindowScene；
+    // 万一场景里没拿到窗口，再用 KVC 兜底（KVC 不触发编译期的废弃警告）。
+    NSMutableArray *windows = [NSMutableArray array];
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in app.connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                [windows addObjectsFromArray:((UIWindowScene *)scene).windows];
+            }
+        }
+    }
+    if (windows.count == 0) {
+        id legacy = [app valueForKey:@"windows"];
+        if ([legacy isKindOfClass:[NSArray class]])
+            [windows addObjectsFromArray:(NSArray *)legacy];
+    }
+    for (UIWindow *window in windows) {
+        if ([window isKindOfClass:[UIWindow class]]) LGScanView(window, 0);
+    }
 }
 
 #pragma mark - 通知
