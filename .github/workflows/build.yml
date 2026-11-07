@@ -1,7 +1,8 @@
 name: Build LiquidGlassCC18 roothide deb
 
-# 编译跑在 GitHub 提供的 macOS 云主机上（自带 Xcode），
-# 你的电脑只需要一个浏览器：上传源码 -> 等构建 -> 下载 .deb。
+# 编译跑在 GitHub 提供的 macOS 云主机上（自带 Xcode）。
+# 与旧版的区别：构建输出会完整保存到 build.log，
+# 失败时把关键错误行写成 annotation 并上传日志，方便直接定位编译错误。
 
 on:
   push:
@@ -26,10 +27,41 @@ jobs:
         env:
           # install-sdk 走 api.github.com；带上 token 可避免匿名限流导致 SDK 下载失败
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
+          set -euo pipefail
           chmod +x ./build.sh
           export THEOS="$HOME/theos"
-          ./build.sh
+          echo "==> Xcode: $(xcode-select -p)"
+          echo "==> clang: $(clang --version | head -n 1)"
+          ./build.sh 2>&1 | tee build.log
+
+      # 失败时把真正的编译/打包错误暴露出来，而不是只有一句 exit code 2
+      - name: Report build errors
+        if: failure()
+        shell: bash
+        run: |
+          if [ ! -f build.log ]; then echo "no build.log was produced"; exit 0; fi
+          echo "::group::Last 100 lines of build log"
+          tail -n 100 build.log
+          echo "::endgroup::"
+          key=$(grep -E -i 'error:|fatal:|Error [0-9]|No rule to make|Undefined symbols|ld: |clang: |not found|No such file|Permission denied|missing a filter|ldid|dpkg-deb|make.*Error' build.log | tail -n 25 | tr '\n' '~' | tr -d '\r' | sed 's/%/%25/g; s/::/:/g' | cut -c1-6000)
+          if [ -n "$key" ]; then echo "::error title=Build failed::$key"; fi
+          {
+            echo "### 构建失败 · 最后 60 行日志"
+            echo '```'
+            tail -n 60 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 无论成功失败都保留完整日志（公开仓库可直接下载）
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
