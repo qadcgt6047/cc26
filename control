@@ -1,0 +1,15 @@
+Package: com.lgcc18.glass
+Name: 控制中心液态玻璃 (ControlCenter18 / iOS 16 roothide)
+Version: 1.0.0
+Architecture: iphoneos-arm64e
+Section: Tweaks
+Depends: firmware (>= 16.0), mobilesubstrate
+Maintainer: LiquidGlassCC18
+Author: LiquidGlassCC18
+Description: 给 ControlCenter18 的按钮、模块与滑块叠加液态玻璃：SDF 圆角折射边缘、逐通道色散、旋转彩色流光与可选系统模糊。
+ 需要已安装 ControlCenter18。设置入口挂在 ControlCenter18 自带的设置面板内，设置首页另有一个可关闭的独立入口。
+ 只追加自己的设置项，不修改系统任何已有控制项，尤其不会改动「Siri 与搜索」。
+ SDF 折射 / 色散数学移植自 Kyant0/AndroidLiquidGlass 2.0.0-alpha03（Apache-2.0, Copyright 2025 Kyant）。
+ 视觉近似，不是 iOS 26 的 UIGlassEffect，不做实时背景折射，也不涉及 Siri 语音功能。
+Depiction: https://github.com/
+Tag: role::hacker, compatible::ios16, compatible::roothide
